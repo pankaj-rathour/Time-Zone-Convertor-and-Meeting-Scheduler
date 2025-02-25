@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Zone Converter & Meeting Scheduler</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Load Moment.js and its timezone data -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
+
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1 style="color:#262730">🌐 Time Zone Converter & Meeting Scheduler</h1>
+            <nav>
+            <button onclick="showPage('converter')" class="nav-btn active">Time Zone Converter</button>
+            <button onclick="showPage('scheduler')" class="nav-btn">Meeting Scheduler</button>
+            <button onclick="showPage('calendar')" class="nav-btn">Calendar View</button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Time Zone Converter -->
+            <section id="converter" class="page active">
+                <h2>🕒 Time Zone Converter</h2>
+                <div class="converter-grid">
+                    <div class="source-time">
+                        <h3>Source Time</h3>
+                        <select id="sourceTimezone"></select>
+                        <input type="date" id="sourceDate">
+                        <input type="time" id="sourceTime">
+                    </div>
+                    <div class="target-time">
+                        <h3>Target Time</h3>
+                        <select id="targetTimezone"></select>
+                        <div id="convertedTime" class="result"></div>
+                    </div>
+                </div>
+                <button onclick="convertTime()" class="primary-btn">Convert Time</button>
+            </section>
+
+            <!-- Meeting Scheduler -->
+            <section id="scheduler" class="page">
+                <h2>📅 Meeting Scheduler</h2>
+                <div class="scheduler-grid">
+                    <div class="new-meeting">
+                        <h3>Schedule New Meeting</h3>
+                        <input type="text" id="meetingTitle" placeholder="Meeting Title">
+                        <textarea id="meetingDesc" placeholder="Meeting Description"></textarea>
+                        <input type="date" id="meetingDate">
+                        <input type="time" id="meetingTime">
+                        <select id="meetingTimezone"></select>
+                        <input type="number" id="duration" value="60" min="15" max="480" step="15" placeholder="Duration (minutes)">
+                        <button onclick="scheduleMeeting()" class="primary-btn">Schedule Meeting</button>
+                    </div>
+                    <div class="meetings-list">
+                        <h3>Upcoming Meetings</h3>
+                        <div id="meetingsList"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Calendar View -->
+            <section id="calendar" class="page">
+                <h2>📅 Calendar View</h2>
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <button onclick="previousMonth()" class="nav-btn">&lt;</button>
+                        <h3 id="currentMonth"></h3>
+                        <button onclick="nextMonth()" class="nav-btn">&gt;</button>
+                    </div>
+                    <div id="calendar-grid"></div>
+                    <div class="selected-date-meetings">
+                        <h3>Meetings for Selected Date</h3>
+                        <div id="selectedDateMeetings"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="sidebar">
+            <h3>About</h3>
+            <p>This application helps you convert time zones and schedule meetings across different time zones easily.</p>
+        </aside>
+    </div>
+</body>
+
+
+<style>
+     :root {
+        --primary-color: #FF4B4B;
+        --background-color: #FFFFFF;
+        --secondary-bg-color: #F0F2F6;
+        --text-color: #262730;
+    }
+    
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    body {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        background-image: url("https://t4.ftcdn.net/jpg/06/23/07/91/360_F_623079123_WTDD4oaE2veYCWDmfGIu9mmQ5PGkxXcB.jpg");
+        background-attachment: fixed;
+        background-size: cover;
+        min-height: 100vh;
+    }
+    
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 20px;
+        position: relative;
+        z-index: 1;
+    }
+    
+    header {
+        grid-column: 1 / -1;
+        padding: 20px;
+        background: rgba(252, 249, 250, 0.425);
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(209, 6, 6, 0.1);
+        backdrop-filter: blur(5px);
+    }
+    
+    h1 {
+        margin-bottom: 20px;
+        color: var(--text-color);
+    }
+    
+    nav {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .nav-btn {
+        padding: 10px 20px;
+        border: none;
+        background: var(--secondary-bg-color);
+        cursor: pointer;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-btn:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .nav-btn.active {
+        background: var(--primary-color);
+        color: white;
+        box-shadow: 0 2px 4px rgba(255, 75, 75, 0.2);
+    }
+    
+    .page {
+        display: none;
+        padding: 20px;
+        background: rgba(216, 250, 152, 0.384);
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(5px);
+    }
+    
+    .page.active {
+        display: block;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .converter-grid,
+    .scheduler-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin: 20px 0;
+    }
+    
+    input,
+    select,
+    textarea {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.9);
+    }
+    
+    .primary-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .primary-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(255, 75, 75, 0.2);
+    }
+    
+    .result {
+        margin-top: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .calendar-container {
+        background: rgba(241, 10, 10, 0.089);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    #calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        margin-bottom: 20px;
+    }
+    
+    .calendar-day {
+        padding: 10px;
+        text-align: center;
+        background: var(--secondary-bg-color);
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .calendar-day:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: scale(1.05);
+    }
+    
+    .calendar-day.today {
+        background: var(--primary-color);
+        color: white;
+        box-shadow: 0 2px 4px rgba(255, 75, 75, 0.2);
+    }
+    
+    .sidebar {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        height: fit-content;
+        backdrop-filter: blur(5px);
+    }
+    
+    .meetings-list {
+        background: rgba(253, 250, 250, 0.226);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .meeting-item {
+        padding: 15px;
+        margin-bottom: 10px;
+        background: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .meeting-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+</style>
+<script>
+    // Get all the required elements
+    // Store meetings in localStorage
+    let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+
+    // Common timezones
+    const commonTimezones = [
+        'US/Pacific', 'US/Eastern', 'UTC', 'Europe/London',
+        'Europe/Paris', 'Asia/Tokyo', 'Asia/Shanghai',
+        'Australia/Sydney', 'Asia/Dubai', 'Asia/Singapore', 'Asia/Kolkata'
+    ];
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', () => {
+        populateTimezones();
+        updateCalendar();
+        displayMeetings();
+        showPage('converter');
+    });
+
+    // Navigation
+    function showPage(pageId) {
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+        document.getElementById(pageId).classList.add('active');
+        document.querySelector(`button[onclick="showPage('${pageId}')"]`).classList.add('active');
+    }
+
+    // Populate timezone dropdowns
+    function populateTimezones() {
+        const dropdowns = ['sourceTimezone', 'targetTimezone', 'meetingTimezone'];
+        dropdowns.forEach(id => {
+            const select = document.getElementById(id);
+            select.innerHTML = ''; // Clear existing options
+            commonTimezones.forEach(tz => {
+                const option = document.createElement('option');
+                option.value = tz;
+                option.textContent = tz;
+                select.appendChild(option);
+            });
+        });
+    }
+
+    // Time Conversion
+    function convertTime() {
+        const sourceDate = document.getElementById('sourceDate').value;
+        const sourceTime = document.getElementById('sourceTime').value;
+        const sourceTz = document.getElementById('sourceTimezone').value;
+        const targetTz = document.getElementById('targetTimezone').value;
+
+        if (!sourceDate || !sourceTime || !sourceTz || !targetTz) {
+            alert("Please fill in all fields before converting.");
+            return;
+        }
+
+        const datetime = moment.tz(`${sourceDate} ${sourceTime}`, sourceTz);
+        if (!datetime.isValid()) {
+            alert("Invalid date/time input.");
+            return;
+        }
+
+        const converted = datetime.clone().tz(targetTz);
+        document.getElementById('convertedTime').innerHTML = `
+        <h4>🎯 Converted Time:</h4>
+        <p><strong>${converted.format('hh:mm A')}</strong></p>
+        <p>on <strong>${converted.format('MMMM DD, YYYY')}</strong></p>
+        <p>(${targetTz})</p>
+    `;
+    }
+
+    // Meeting Scheduler
+    function scheduleMeeting() {
+        const title = document.getElementById('meetingTitle').value.trim();
+        const description = document.getElementById('meetingDesc').value.trim();
+        const date = document.getElementById('meetingDate').value;
+        const time = document.getElementById('meetingTime').value;
+        const timezone = document.getElementById('meetingTimezone').value;
+        const duration = document.getElementById('duration').value;
+
+        if (!title || !date || !time || !timezone || !duration) {
+            alert('Please fill in all required fields.');
+            return;
+        }
+
+        const meeting = {
+            title,
+            description,
+            date,
+            time,
+            timezone,
+            duration
+        };
+        meetings.push(meeting);
+        localStorage.setItem('meetings', JSON.stringify(meetings));
+
+        displayMeetings();
+        updateCalendar(); // Ensure UI updates
+        alert('Meeting scheduled successfully!');
+    }
+
+    function displayMeetings() {
+        const meetingsList = document.getElementById('meetingsList');
+        meetingsList.innerHTML = meetings.length === 0 ? '<p>No meetings scheduled</p>' : '';
+
+        meetings.forEach((meeting, index) => {
+            const meetingEl = document.createElement('div');
+            meetingEl.className = 'meeting-item';
+            meetingEl.innerHTML = `
+            <h4>📍 ${meeting.title}</h4>
+            <p><strong>Description:</strong> ${meeting.description}</p>
+            <p><strong>Time:</strong> ${formatMeetingTime(meeting)}</p>
+            <p><strong>Duration:</strong> ${meeting.duration} minutes</p>
+            <button onclick="deleteMeeting(${index})" class="delete-btn">Delete</button>
+        `;
+            meetingsList.appendChild(meetingEl);
+        });
+    }
+
+    function deleteMeeting(index) {
+        meetings.splice(index, 1);
+        localStorage.setItem('meetings', JSON.stringify(meetings));
+        displayMeetings();
+        updateCalendar();
+    }
+
+    // Calendar View
+    function updateCalendar() {
+        const now = moment();
+        document.getElementById('currentMonth').textContent = now.format('MMMM YYYY');
+
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = '';
+
+        // Weekday Headers (consistent format)
+        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'calendar-day header';
+            dayHeader.textContent = day;
+            grid.appendChild(dayHeader);
+        });
+
+        // Add days
+        const firstDay = now.clone().startOf('month');
+        const lastDay = now.clone().endOf('month');
+
+        for (let i = 0; i < firstDay.day(); i++) {
+            grid.appendChild(document.createElement('div'));
+        }
+
+        for (let day = 1; day <= lastDay.date(); day++) {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'calendar-day';
+            if (day === now.date()) dayEl.classList.add('today');
+            dayEl.textContent = day;
+            dayEl.onclick = () => showMeetingsForDate(day);
+            grid.appendChild(dayEl);
+        }
+    }
+
+    function showMeetingsForDate(day) {
+        const selectedDate = moment().date(day).format('YYYY-MM-DD');
+        const dayMeetings = meetings.filter(m => m.date === selectedDate);
+
+        const container = document.getElementById('selectedDateMeetings');
+        container.innerHTML = dayMeetings.length === 0 ?
+            '<p>No meetings scheduled for this date</p>' :
+            dayMeetings.map(m => `
+            <div class="meeting-item">
+                <h4>${m.title}</h4>
+                <p>Time: ${m.time}</p>
+                <p>Duration: ${m.duration} minutes</p>
+            </div>
+        `).join('');
+    }
+
+    function formatMeetingTime(meeting) {
+        const datetime = moment.tz(`${meeting.date} ${meeting.time}`, meeting.timezone);
+        return datetime.isValid() ? datetime.format('YYYY-MM-DD hh:mm A z') : 'Invalid Date/Time';
+    }
+
+    // Navigate Calendar Months
+    function changeMonth(direction) {
+        const currentMonth = moment(document.getElementById('currentMonth').textContent, 'MMMM YYYY');
+        const newMonth = currentMonth.add(direction, 'month');
+
+        document.getElementById('currentMonth').textContent = newMonth.format('MMMM YYYY');
+        updateCalendar();
+    }
+
+    // Attach event listeners for month navigation
+    document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
+</script>
+
+</html>
